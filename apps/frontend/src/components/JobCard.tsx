@@ -101,7 +101,6 @@ export function JobCard({ job, onRetry, onCancel }: JobCardProps) {
 
   const handleCopyPrompt = async () => {
     try {
-      // eslint-disable-next-line no-undef -- clipboard is browser-only
       await navigator.clipboard.writeText(job.prompt);
     } catch {
       // clipboard API unavailable (e.g. SSR)

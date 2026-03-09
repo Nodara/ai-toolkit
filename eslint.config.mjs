@@ -56,6 +56,14 @@ export default [
   },
   {
     files: ['apps/frontend/src/**/*.{ts,tsx}'],
+    languageOptions: {
+      globals: {
+        EventSource: 'readonly',
+        navigator: 'readonly',
+        window: 'readonly',
+        document: 'readonly',
+      },
+    },
     plugins: {
       '@next/next': nextPlugin,
     },
