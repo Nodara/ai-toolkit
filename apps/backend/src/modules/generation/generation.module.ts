@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { GenerationService } from '@/modules/generation/generation.service';
+import { PromptEnhancementService } from '@/modules/generation/prompt-enhancement.service';
 
 @Module({
   imports: [
@@ -9,7 +10,7 @@ import { GenerationService } from '@/modules/generation/generation.service';
       maxRedirects: 5,
     }),
   ],
-  providers: [GenerationService],
-  exports: [GenerationService],
+  providers: [GenerationService, PromptEnhancementService],
+  exports: [GenerationService, PromptEnhancementService],
 })
 export class GenerationModule {}

@@ -12,6 +12,7 @@ import { JobEntity, JobStatus } from '@/modules/jobs/entities/job.entity';
 import { CreateJobDto } from '@/modules/jobs/dto/create-job.dto';
 import { JobResponseDto } from '@/modules/jobs/dto/job-response.dto';
 import { JobFilterDto } from '@/modules/jobs/dto/job-filter.dto';
+import { PromptEnhancementService } from '@/modules/generation/prompt-enhancement.service';
 
 export interface PaginatedJobs {
   data: JobResponseDto[];
@@ -26,13 +27,27 @@ export class JobsService {
     @InjectQueue('generation')
     private readonly generationQueue: Queue,
     @InjectRepository(JobEntity)
-    private readonly jobRepository: Repository<JobEntity>
+    private readonly jobRepository: Repository<JobEntity>,
+    private readonly promptEnhancementService: PromptEnhancementService
   ) {}
 
   async createJob(dto: CreateJobDto): Promise<JobResponseDto> {
+    let enhancedPrompt: string | null = null;
+
+    if (dto.enhancePrompt === true) {
+      const enhanced = await Promise.race([
+        this.promptEnhancementService.enhance(dto.prompt, dto.type),
+        new Promise<string>((resolve) =>
+          setTimeout(() => resolve(dto.prompt), 2500)
+        ),
+      ]);
+      enhancedPrompt = enhanced !== dto.prompt ? enhanced : null;
+    }
+
     const job = this.jobRepository.create({
       type: dto.type,
       prompt: dto.prompt,
+      enhancedPrompt,
       status: JobStatus.PENDING,
       priority: dto.priority ?? 0,
     });
