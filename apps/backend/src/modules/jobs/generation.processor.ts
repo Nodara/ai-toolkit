@@ -3,11 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import {
-  JobEntity,
-  JobStatus,
-  JobType,
-} from '@/modules/jobs/entities/job.entity';
+import { JobEntity, JobStatus } from '@/modules/jobs/entities/job.entity';
 import { GenerationService } from '@/modules/generation/generation.service';
 import { SseService } from '@/modules/sse/sse.service';
 
@@ -50,16 +46,18 @@ export class GenerationProcessor extends WorkerHost {
 
       const updatePayload: Partial<JobEntity> = {
         status: JobStatus.COMPLETED,
+        resultUrl: result.resultUrl ?? null,
+        resultText: result.resultText ?? null,
       };
-      if (entity.type === JobType.IMAGE && result.startsWith('http')) {
-        updatePayload.resultUrl = result;
-      } else {
-        updatePayload.resultText = result;
-      }
       await this.jobRepository.update(jobId, updatePayload);
       this.sseService.emit({
         type: 'job:completed',
-        data: { jobId, status: JobStatus.COMPLETED, result },
+        data: {
+          jobId,
+          status: JobStatus.COMPLETED,
+          resultUrl: result.resultUrl,
+          resultText: result.resultText,
+        },
       });
     } catch (error) {
       const errorMessage = this.getErrorMessage(error);
