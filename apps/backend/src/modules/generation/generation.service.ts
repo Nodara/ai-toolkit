@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { JobEntity } from '@/modules/jobs/entities/job.entity';
 
 @Injectable()
 export class GenerationService {
-  async generate(payload: { type: string; prompt: string }): Promise<string> {
+  async generate(job: JobEntity): Promise<string> {
     // Placeholder: AI generation logic to be implemented
-    return `Generated for ${payload.type}: ${payload.prompt}`;
+    const enhancePrompt = !!job.enhancedPrompt;
+    return `Generated for ${job.type}: ${job.prompt}${enhancePrompt ? ' (enhanced)' : ''}`;
   }
 }

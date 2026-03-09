@@ -5,7 +5,7 @@ import { Queue } from 'bullmq';
 @Injectable()
 export class QueueService {
   constructor(
-    @InjectQueue('jobs')
-    public readonly jobsQueue: Queue
+    @InjectQueue('generation')
+    public readonly generationQueue: Queue
   ) {}
 }
