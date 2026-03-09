@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Providers } from '@/components/providers';
+import { AppNav } from '@/components';
 
 export const metadata: Metadata = {
   title: 'AI Toolkit',
@@ -14,7 +15,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          <AppNav />
+          {children}
+        </Providers>
       </body>
     </html>
   );

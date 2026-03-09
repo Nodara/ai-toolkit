@@ -2,15 +2,13 @@
 
 import { useState } from 'react';
 import {
-  AppBar,
-  Toolbar,
-  Typography,
   Container,
   Paper,
   ToggleButton,
   ToggleButtonGroup,
   Button,
   Box,
+  Typography,
 } from '@mui/material';
 import ImageIcon from '@mui/icons-material/Image';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
@@ -51,127 +49,106 @@ export default function Home() {
   };
 
   return (
-    <>
-      <AppBar position="sticky" color="default" elevation={1}>
-        <Toolbar
-          sx={{ flexDirection: 'column', alignItems: 'stretch', py: 1.5 }}
-        >
-          <Typography variant="h6" component="h1">
-            Mini AI Toolkit
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Generate images and text with AI
-          </Typography>
-        </Toolbar>
-      </AppBar>
+    <Container maxWidth="lg" sx={{ py: 3 }}>
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <PromptForm />
+      </Paper>
 
-      <Container maxWidth="lg" sx={{ py: 3 }}>
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <PromptForm />
-        </Paper>
-
-        <Box
-          sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: 2,
-            mb: 3,
-          }}
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <ToggleButtonGroup
+          value={typeFilter}
+          exclusive
+          onChange={(_, v) => v != null && setTypeFilter(v)}
+          size="small"
         >
-          <ToggleButtonGroup
-            value={typeFilter}
-            exclusive
-            onChange={(_, v) => v != null && setTypeFilter(v)}
-            size="small"
+          {TYPE_OPTIONS.map((opt) => (
+            <ToggleButton key={opt.value} value={opt.value}>
+              {opt.value === 'image' && (
+                <ImageIcon sx={{ mr: 0.5 }} fontSize="small" />
+              )}
+              {opt.value === 'text' && (
+                <TextFieldsIcon sx={{ mr: 0.5 }} fontSize="small" />
+              )}
+              {opt.label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+        <ToggleButtonGroup
+          value={statusFilter}
+          exclusive
+          onChange={(_, v) => v != null && setStatusFilter(v)}
+          size="small"
+        >
+          {STATUS_OPTIONS.map((opt) => (
+            <ToggleButton key={opt.value} value={opt.value}>
+              {opt.label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+        {hasActiveFilters && (
+          <Button size="small" startIcon={<ClearIcon />} onClick={clearFilters}>
+            Clear
+          </Button>
+        )}
+      </Box>
+
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: 'repeat(2, 1fr)',
+            md: 'repeat(3, 1fr)',
+          },
+          gap: 2,
+        }}
+      >
+        {loading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <Box key={i}>
+              <JobCardSkeleton />
+            </Box>
+          ))
+        ) : jobs.length === 0 ? (
+          <Box
+            sx={{
+              gridColumn: '1 / -1',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              py: 8,
+              color: 'text.secondary',
+            }}
           >
-            {TYPE_OPTIONS.map((opt) => (
-              <ToggleButton key={opt.value} value={opt.value}>
-                {opt.value === 'image' && (
-                  <ImageIcon sx={{ mr: 0.5 }} fontSize="small" />
-                )}
-                {opt.value === 'text' && (
-                  <TextFieldsIcon sx={{ mr: 0.5 }} fontSize="small" />
-                )}
-                {opt.label}
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
-          <ToggleButtonGroup
-            value={statusFilter}
-            exclusive
-            onChange={(_, v) => v != null && setStatusFilter(v)}
-            size="small"
-          >
-            {STATUS_OPTIONS.map((opt) => (
-              <ToggleButton key={opt.value} value={opt.value}>
-                {opt.label}
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
-          {hasActiveFilters && (
-            <Button
-              size="small"
-              startIcon={<ClearIcon />}
-              onClick={clearFilters}
-            >
-              Clear
-            </Button>
-          )}
-        </Box>
-
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: {
-              xs: '1fr',
-              sm: 'repeat(2, 1fr)',
-              md: 'repeat(3, 1fr)',
-            },
-            gap: 2,
-          }}
-        >
-          {loading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <Box key={i}>
-                <JobCardSkeleton />
-              </Box>
-            ))
-          ) : jobs.length === 0 ? (
+            <InboxIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
+            <Typography variant="body1">No jobs match your filters</Typography>
+          </Box>
+        ) : (
+          jobs.map((job) => (
             <Box
+              key={job.id}
               sx={{
-                gridColumn: '1 / -1',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                py: 8,
-                color: 'text.secondary',
+                opacity: newIds.has(job.id) ? 0 : 1,
+                transform: newIds.has(job.id)
+                  ? 'translateY(-8px)'
+                  : 'translateY(0)',
+                transition: 'opacity 0.3s ease, transform 0.3s ease',
               }}
             >
-              <InboxIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5 }} />
-              <Typography variant="body1">
-                No jobs match your filters
-              </Typography>
+              <JobCard job={job} onRetry={retryJob} onCancel={cancelJob} />
             </Box>
-          ) : (
-            jobs.map((job) => (
-              <Box
-                key={job.id}
-                sx={{
-                  opacity: newIds.has(job.id) ? 0 : 1,
-                  transform: newIds.has(job.id)
-                    ? 'translateY(-8px)'
-                    : 'translateY(0)',
-                  transition: 'opacity 0.3s ease, transform 0.3s ease',
-                }}
-              >
-                <JobCard job={job} onRetry={retryJob} onCancel={cancelJob} />
-              </Box>
-            ))
-          )}
-        </Box>
-      </Container>
-    </>
+          ))
+        )}
+      </Box>
+    </Container>
   );
 }
