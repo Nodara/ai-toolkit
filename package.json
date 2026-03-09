@@ -1,0 +1,24 @@
+{
+  "name": "ai-toolkit",
+  "private": true,
+  "packageManager": "pnpm@10.31.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "eslint \"apps/frontend/src/**/*.{ts,tsx}\" \"apps/backend/src/**/*.{ts,tsx}\"",
+    "format": "prettier --write \"apps/**\" \"*.{json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"apps/**\" \"*.{json,md,yaml,yml}\""
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@next/eslint-plugin-next": "16.1.6",
+    "@typescript-eslint/eslint-plugin": "8.56.1",
+    "@typescript-eslint/parser": "8.56.1",
+    "eslint": "10.0.3",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-prettier": "5.5.5",
+    "prettier": "3.8.1",
+    "turbo": "2.8.14",
+    "typescript": "5.9.3"
+  }
+}
