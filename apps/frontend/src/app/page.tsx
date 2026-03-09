@@ -1,9 +1,17 @@
-import { Typography } from '@mui/material';
+import { Typography, Container, Paper } from '@mui/material';
+import { PromptForm } from '@/components';
 
 export default function Home() {
   return (
     <main>
-      <Typography variant="h1">AI Toolkit</Typography>
+      <Container maxWidth="sm" sx={{ py: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          AI Toolkit
+        </Typography>
+        <Paper sx={{ p: 3 }}>
+          <PromptForm />
+        </Paper>
+      </Container>
     </main>
   );
 }
