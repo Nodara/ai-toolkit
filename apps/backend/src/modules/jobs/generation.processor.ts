@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { JobEntity, JobStatus } from '@/modules/jobs/entities/job.entity';
 import { GenerationService } from '@/modules/generation/generation.service';
 import { SseService } from '@/modules/sse/sse.service';
+import { JobsService } from '@/modules/jobs/jobs.service';
 
 export interface GenerationJobData {
   jobId: string;
@@ -18,7 +19,8 @@ export class GenerationProcessor extends WorkerHost {
     @InjectRepository(JobEntity)
     private readonly jobRepository: Repository<JobEntity>,
     private readonly generationService: GenerationService,
-    private readonly sseService: SseService
+    private readonly sseService: SseService,
+    private readonly jobsService: JobsService
   ) {
     super();
   }
@@ -34,9 +36,12 @@ export class GenerationProcessor extends WorkerHost {
 
     try {
       await this.jobRepository.update(jobId, { status: JobStatus.GENERATING });
-      this.sseService.emit({
-        type: 'job:status',
-        data: { jobId, status: JobStatus.GENERATING },
+      const generatingEntity = await this.jobRepository.findOneOrFail({
+        where: { id: jobId },
+      });
+      this.sseService.broadcast({
+        type: 'job:updated',
+        payload: this.jobsService.toResponseDto(generatingEntity),
       });
 
       const result = await this.runWithTimeout(
@@ -50,14 +55,12 @@ export class GenerationProcessor extends WorkerHost {
         resultText: result.resultText ?? null,
       };
       await this.jobRepository.update(jobId, updatePayload);
-      this.sseService.emit({
+      const completedEntity = await this.jobRepository.findOneOrFail({
+        where: { id: jobId },
+      });
+      this.sseService.broadcast({
         type: 'job:completed',
-        data: {
-          jobId,
-          status: JobStatus.COMPLETED,
-          resultUrl: result.resultUrl,
-          resultText: result.resultText,
-        },
+        payload: this.jobsService.toResponseDto(completedEntity),
       });
     } catch (error) {
       const errorMessage = this.getErrorMessage(error);
@@ -65,9 +68,12 @@ export class GenerationProcessor extends WorkerHost {
         status: JobStatus.FAILED,
         errorMessage,
       });
-      this.sseService.emit({
+      const failedEntity = await this.jobRepository.findOneOrFail({
+        where: { id: jobId },
+      });
+      this.sseService.broadcast({
         type: 'job:failed',
-        data: { jobId, status: JobStatus.FAILED, errorMessage },
+        payload: this.jobsService.toResponseDto(failedEntity),
       });
       throw error;
     }

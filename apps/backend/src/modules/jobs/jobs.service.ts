@@ -13,6 +13,7 @@ import { CreateJobDto } from '@/modules/jobs/dto/create-job.dto';
 import { JobResponseDto } from '@/modules/jobs/dto/job-response.dto';
 import { JobFilterDto } from '@/modules/jobs/dto/job-filter.dto';
 import { PromptEnhancementService } from '@/modules/generation/prompt-enhancement.service';
+import { SseService } from '@/modules/sse/sse.service';
 
 export interface PaginatedJobs {
   data: JobResponseDto[];
@@ -28,7 +29,8 @@ export class JobsService {
     private readonly generationQueue: Queue,
     @InjectRepository(JobEntity)
     private readonly jobRepository: Repository<JobEntity>,
-    private readonly promptEnhancementService: PromptEnhancementService
+    private readonly promptEnhancementService: PromptEnhancementService,
+    private readonly sseService: SseService
   ) {}
 
   async createJob(dto: CreateJobDto): Promise<JobResponseDto> {
@@ -52,6 +54,10 @@ export class JobsService {
       priority: dto.priority ?? 0,
     });
     const saved = await this.jobRepository.save(job);
+    this.sseService.broadcast({
+      type: 'job:created',
+      payload: this.toResponseDto(saved),
+    });
     await this.generationQueue.add(
       'generate',
       { jobId: saved.id },
@@ -116,6 +122,10 @@ export class JobsService {
 
     await this.jobRepository.update(id, { status: JobStatus.CANCELLED });
     const updated = await this.jobRepository.findOneOrFail({ where: { id } });
+    this.sseService.broadcast({
+      type: 'job:updated',
+      payload: this.toResponseDto(updated),
+    });
     return this.toResponseDto(updated);
   }
 
@@ -147,10 +157,14 @@ export class JobsService {
     );
 
     const updated = await this.jobRepository.findOneOrFail({ where: { id } });
+    this.sseService.broadcast({
+      type: 'job:updated',
+      payload: this.toResponseDto(updated),
+    });
     return this.toResponseDto(updated);
   }
 
-  private toResponseDto(entity: JobEntity): JobResponseDto {
+  toResponseDto(entity: JobEntity): JobResponseDto {
     return plainToInstance(JobResponseDto, instanceToPlain(entity), {
       excludeExtraneousValues: true,
     });
