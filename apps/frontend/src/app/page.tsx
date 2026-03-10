@@ -40,7 +40,7 @@ export default function Home() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
-  const { jobs, loading, newIds, retryJob, cancelJob } = useJobs({
+  const { jobs, loading, newIds, retryJob, cancelJob, deleteJob } = useJobs({
     typeFilter,
     statusFilter,
   });
@@ -69,6 +69,20 @@ export default function Home() {
       }
     },
     [cancelJob]
+  );
+
+  const handleDelete = useCallback(
+    async (jobId: string) => {
+      try {
+        await deleteJob(jobId);
+      } catch (err) {
+        setSnackbarMessage(
+          err instanceof Error ? err.message : 'Delete failed'
+        );
+        setSnackbarOpen(true);
+      }
+    },
+    [deleteJob]
   );
 
   const hasActiveFilters = typeFilter !== 'all' || statusFilter !== 'all';
@@ -177,6 +191,7 @@ export default function Home() {
                 job={job}
                 onRetry={handleRetry}
                 onCancel={handleCancel}
+                onDelete={handleDelete}
               />
             </Box>
           ))

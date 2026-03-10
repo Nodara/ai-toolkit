@@ -28,6 +28,7 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CancelIcon from '@mui/icons-material/Cancel';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { useJobsHistory } from '@/hooks/useJobsHistory';
 import { useDebounce } from '@/hooks/useDebounce';
 import { API_URL, getUserFriendlyMessage, formatJobErrorMessage } from '@/lib';
@@ -49,13 +50,19 @@ function RowActions({
   job,
   onRetry,
   onCancel,
+  onDelete,
 }: {
   job: Job;
   onRetry: (id: string) => void;
   onCancel: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
-  const canRetry = job.status === 'failed' || job.status === 'cancelled';
+  const canRetry = job.status === 'failed';
   const canCancel = job.status === 'pending' || job.status === 'generating';
+  const canDelete =
+    job.status === 'completed' ||
+    job.status === 'cancelled' ||
+    job.status === 'failed';
 
   return (
     <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -90,6 +97,17 @@ function RowActions({
           <CancelIcon fontSize="small" />
         </IconButton>
       )}
+      {canDelete && (
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(job.id);
+          }}
+        >
+          <DeleteIcon fontSize="small" />
+        </IconButton>
+      )}
     </Box>
   );
 }
@@ -98,10 +116,12 @@ function ExpandableRow({
   job,
   onRetry,
   onCancel,
+  onDelete,
 }: {
   job: Job;
   onRetry: (id: string) => void;
   onCancel: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -131,7 +151,12 @@ function ExpandableRow({
         <TableCell>{job.enhancedPrompt ? 'Yes' : '—'}</TableCell>
         <TableCell>{formatDate(job.createdAt)}</TableCell>
         <TableCell onClick={(e) => e.stopPropagation()}>
-          <RowActions job={job} onRetry={onRetry} onCancel={onCancel} />
+          <RowActions
+            job={job}
+            onRetry={onRetry}
+            onCancel={onCancel}
+            onDelete={onDelete}
+          />
         </TableCell>
       </TableRow>
       <TableRow>
@@ -323,6 +348,34 @@ export default function HistoryPage() {
     [refetch]
   );
 
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        const res = await fetch(`${API_URL}/jobs/${id}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          const msg = getUserFriendlyMessage({
+            status: res.status,
+            message: (body as { message?: string | string[] }).message,
+            context: 'fetch',
+          });
+          throw new Error(msg);
+        }
+        refetch();
+      } catch (err) {
+        const msg =
+          err instanceof Error
+            ? getUserFriendlyMessage({ message: err.message, context: 'fetch' })
+            : 'Something went wrong. Please try again.';
+        setSnackbarMessage(msg);
+        setSnackbarOpen(true);
+      }
+    },
+    [refetch]
+  );
+
   return (
     <Box sx={{ p: 3 }}>
       <Box
@@ -413,6 +466,7 @@ export default function HistoryPage() {
                   job={job}
                   onRetry={handleRetry}
                   onCancel={handleCancel}
+                  onDelete={handleDelete}
                 />
               ))
             )}

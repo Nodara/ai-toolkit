@@ -177,6 +177,24 @@ export class JobsService {
     return this.toResponseDto(updated);
   }
 
+  async deleteJob(id: string): Promise<void> {
+    const entity = await this.jobRepository.findOne({ where: { id } });
+    if (!entity) {
+      throw new NotFoundException(`Job with id ${id} not found`);
+    }
+    if (
+      entity.status !== JobStatus.COMPLETED &&
+      entity.status !== JobStatus.CANCELLED &&
+      entity.status !== JobStatus.FAILED
+    ) {
+      throw new ConflictException(
+        `Can only delete completed, failed, or cancelled jobs, got ${entity.status}`
+      );
+    }
+    await this.jobRepository.delete(id);
+    this.sseService.broadcast({ type: 'job:deleted', payload: { id } });
+  }
+
   toResponseDto(entity: JobEntity): JobResponseDto {
     return plainToInstance(JobResponseDto, instanceToPlain(entity), {
       excludeExtraneousValues: true,

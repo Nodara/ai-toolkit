@@ -122,6 +122,15 @@ export function useJobs(options: UseJobsOptions = {}) {
               return next;
             });
           }
+        } else if (event.type === 'job:deleted') {
+          const { id } = payload as { id?: string };
+          if (id) {
+            setJobsMap((prev) => {
+              const next = new Map(prev);
+              next.delete(id);
+              return next;
+            });
+          }
         }
       } catch {
         // ignore parse errors
@@ -185,12 +194,33 @@ export function useJobs(options: UseJobsOptions = {}) {
     });
   }, []);
 
+  const deleteJob = useCallback(async (jobId: string) => {
+    const res = await fetch(`${API_URL}/jobs/${jobId}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const msg = getUserFriendlyMessage({
+        status: res.status,
+        message: (body as { message?: string | string[] }).message,
+        context: 'fetch',
+      });
+      throw new Error(msg);
+    }
+    setJobsMap((prev) => {
+      const next = new Map(prev);
+      next.delete(jobId);
+      return next;
+    });
+  }, []);
+
   return {
     jobs: filteredJobs,
     loading,
     newIds,
     retryJob,
     cancelJob,
+    deleteJob,
     refetch: fetchJobs,
   };
 }

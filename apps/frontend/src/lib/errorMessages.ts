@@ -40,6 +40,9 @@ export function getUserFriendlyMessage(options: {
       if (msg.includes('can only retry')) {
         return 'Only failed or cancelled jobs can be retried.';
       }
+      if (msg.includes('can only delete')) {
+        return 'Only completed, failed, or cancelled jobs can be deleted.';
+      }
     }
     if (
       effectiveStatus === 503 ||
@@ -70,6 +73,8 @@ export function getUserFriendlyMessage(options: {
     return "This job can't be cancelled right now.";
   if (msg.includes('can only retry'))
     return 'Only failed or cancelled jobs can be retried.';
+  if (msg.includes('can only delete'))
+    return 'Only completed, failed, or cancelled jobs can be deleted.';
   if (msg.includes('queue') || msg.includes('unavailable')) {
     return 'The service is temporarily busy. Please try again in a moment.';
   }

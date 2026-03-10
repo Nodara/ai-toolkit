@@ -17,6 +17,7 @@ import {
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CancelIcon from '@mui/icons-material/Cancel';
+import DeleteIcon from '@mui/icons-material/Delete';
 import BrokenImageIcon from '@mui/icons-material/BrokenImage';
 import { type Job } from '@/types';
 import { timeAgo, formatJobErrorMessage } from '@/lib';
@@ -25,6 +26,7 @@ interface JobCardProps {
   job: Job;
   onRetry?: (jobId: string) => void;
   onCancel?: (jobId: string) => void;
+  onDelete?: (jobId: string) => void;
 }
 
 const STATUS_CHIP_SX = {
@@ -89,17 +91,21 @@ function PromptDisplay({
   );
 }
 
-export function JobCard({ job, onRetry, onCancel }: JobCardProps) {
+export function JobCard({ job, onRetry, onCancel, onDelete }: JobCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [promptExpanded, setPromptExpanded] = useState(false);
 
   const displayPrompt = job.enhancedPrompt ?? job.prompt;
   const isEnhanced = !!job.enhancedPrompt;
-  const canRetry =
-    (job.status === 'failed' || job.status === 'cancelled') && !!onRetry;
+  const canRetry = job.status === 'failed' && !!onRetry;
   const canCancel =
     (job.status === 'pending' || job.status === 'generating') && !!onCancel;
+  const canDelete =
+    (job.status === 'completed' ||
+      job.status === 'cancelled' ||
+      job.status === 'failed') &&
+    !!onDelete;
 
   const handleCopyPrompt = async () => {
     try {
@@ -267,6 +273,13 @@ export function JobCard({ job, onRetry, onCancel }: JobCardProps) {
             <Tooltip title="Cancel">
               <IconButton size="small" onClick={() => onCancel?.(job.id)}>
                 <CancelIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+          {canDelete && (
+            <Tooltip title="Delete">
+              <IconButton size="small" onClick={() => onDelete?.(job.id)}>
+                <DeleteIcon fontSize="small" />
               </IconButton>
             </Tooltip>
           )}

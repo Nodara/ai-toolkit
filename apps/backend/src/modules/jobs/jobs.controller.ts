@@ -39,6 +39,12 @@ export class JobsController {
     return this.jobsService.cancelJob(id);
   }
 
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  delete(@Param('id', ParseUUIDPipe) id: string) {
+    return this.jobsService.deleteJob(id);
+  }
+
   @Post(':id/retry')
   retry(@Param('id', ParseUUIDPipe) id: string) {
     return this.jobsService.retryJob(id);

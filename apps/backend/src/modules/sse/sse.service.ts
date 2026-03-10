@@ -8,9 +8,10 @@ export interface SseEvent {
     | 'job:updated'
     | 'job:completed'
     | 'job:failed'
+    | 'job:deleted'
     | 'heartbeat'
     | 'connected';
-  payload?: JobResponseDto | { clientId: string };
+  payload?: JobResponseDto | { clientId: string } | { id: string };
 }
 
 @Injectable()
