@@ -7,6 +7,7 @@ import { QueueModule } from '@/modules/queue/queue.module';
 import { JobsModule } from '@/modules/jobs/jobs.module';
 import { GenerationModule } from '@/modules/generation/generation.module';
 import { SseModule } from '@/modules/sse/sse.module';
+import { HealthModule } from '@/modules/health/health.module';
 import { CommonModule } from '@/common/common.module';
 
 @Module({
@@ -17,6 +18,7 @@ import { CommonModule } from '@/common/common.module';
     JobsModule,
     GenerationModule,
     SseModule,
+    HealthModule,
     CommonModule,
   ],
   controllers: [AppController],
