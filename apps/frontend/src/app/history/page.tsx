@@ -30,7 +30,7 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { useJobsHistory } from '@/hooks/useJobsHistory';
 import { useDebounce } from '@/hooks/useDebounce';
-import { API_URL } from '@/lib';
+import { API_URL, getUserFriendlyMessage, formatJobErrorMessage } from '@/lib';
 import type { Job } from '@/types';
 
 const PROMPT_MAX = 40;
@@ -206,7 +206,7 @@ function ExpandableRow({
                   color="error"
                   sx={{ display: 'block', mt: 1 }}
                 >
-                  {job.errorMessage}
+                  {formatJobErrorMessage(job.errorMessage)}
                 </Typography>
               )}
               {!job.resultUrl && !job.resultText && job.status !== 'failed' && (
@@ -272,12 +272,20 @@ export default function HistoryPage() {
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          const msg = (body as { message?: string }).message ?? 'Retry failed';
+          const msg = getUserFriendlyMessage({
+            status: res.status,
+            message: (body as { message?: string | string[] }).message,
+            context: 'retry',
+          });
           throw new Error(msg);
         }
         refetch();
       } catch (err) {
-        setSnackbarMessage(err instanceof Error ? err.message : 'Retry failed');
+        const msg =
+          err instanceof Error
+            ? getUserFriendlyMessage({ message: err.message, context: 'retry' })
+            : 'Something went wrong. Please try again.';
+        setSnackbarMessage(msg);
         setSnackbarOpen(true);
       }
     },
@@ -292,14 +300,23 @@ export default function HistoryPage() {
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          const msg = (body as { message?: string }).message ?? 'Cancel failed';
+          const msg = getUserFriendlyMessage({
+            status: res.status,
+            message: (body as { message?: string | string[] }).message,
+            context: 'cancel',
+          });
           throw new Error(msg);
         }
         refetch();
       } catch (err) {
-        setSnackbarMessage(
-          err instanceof Error ? err.message : 'Cancel failed'
-        );
+        const msg =
+          err instanceof Error
+            ? getUserFriendlyMessage({
+                message: err.message,
+                context: 'cancel',
+              })
+            : 'Something went wrong. Please try again.';
+        setSnackbarMessage(msg);
         setSnackbarOpen(true);
       }
     },

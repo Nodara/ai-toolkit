@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { type Job } from '@/types';
-import { API_URL } from '@/lib';
+import { API_URL, getUserFriendlyMessage } from '@/lib';
 import { useApiStatus } from '@/contexts/ApiStatusContext';
 
 export function useJobsHistory() {
@@ -16,18 +16,23 @@ export function useJobsHistory() {
     try {
       const res = await fetch(`${API_URL}/jobs?limit=500`);
       if (!res.ok) {
-        const is5xx = res.status >= 500;
-        throw new Error(
-          is5xx
-            ? 'Server error. Please try again later.'
-            : 'Failed to fetch jobs'
-        );
+        const body = await res.json().catch(() => ({}));
+        const msg = getUserFriendlyMessage({
+          status: res.status,
+          message: (body as { message?: string | string[] }).message,
+          context: 'fetch',
+        });
+        throw new Error(msg);
       }
       const data = await res.json();
       setJobs(data.data ?? []);
     } catch (err) {
       setJobs([]);
-      setApiError(err instanceof Error ? err.message : 'Failed to fetch jobs');
+      const msg =
+        err instanceof Error
+          ? getUserFriendlyMessage({ message: err.message, context: 'fetch' })
+          : 'Something went wrong. Please try again.';
+      setApiError(msg);
     } finally {
       setLoading(false);
     }

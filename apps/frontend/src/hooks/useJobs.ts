@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { type Job } from '@/types';
-import { API_URL } from '@/lib';
+import { API_URL, getUserFriendlyMessage } from '@/lib';
 import { useApiStatus } from '@/contexts/ApiStatusContext';
 
 export type JobTypeFilter = 'all' | 'image' | 'text';
@@ -47,12 +47,13 @@ export function useJobs(options: UseJobsOptions = {}) {
       params.set('limit', '100');
       const res = await fetch(`${API_URL}/jobs?${params}`);
       if (!res.ok) {
-        const is5xx = res.status >= 500;
-        throw new Error(
-          is5xx
-            ? 'Server error. Please try again later.'
-            : 'Failed to fetch jobs'
-        );
+        const body = await res.json().catch(() => ({}));
+        const msg = getUserFriendlyMessage({
+          status: res.status,
+          message: (body as { message?: string | string[] }).message,
+          context: 'fetch',
+        });
+        throw new Error(msg);
       }
       const data = await res.json();
       const jobs: Job[] = data.data ?? [];
@@ -61,7 +62,11 @@ export function useJobs(options: UseJobsOptions = {}) {
       setJobsMap(map);
     } catch (err) {
       setJobsMap(new Map());
-      setApiError(err instanceof Error ? err.message : 'Failed to fetch jobs');
+      const msg =
+        err instanceof Error
+          ? getUserFriendlyMessage({ message: err.message, context: 'fetch' })
+          : 'Something went wrong. Please try again.';
+      setApiError(msg);
     } finally {
       setLoading(false);
     }
@@ -144,7 +149,11 @@ export function useJobs(options: UseJobsOptions = {}) {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      const msg = (body as { message?: string }).message ?? 'Retry failed';
+      const msg = getUserFriendlyMessage({
+        status: res.status,
+        message: (body as { message?: string | string[] }).message,
+        context: 'retry',
+      });
       throw new Error(msg);
     }
     const job = await res.json();
@@ -161,7 +170,11 @@ export function useJobs(options: UseJobsOptions = {}) {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      const msg = (body as { message?: string }).message ?? 'Cancel failed';
+      const msg = getUserFriendlyMessage({
+        status: res.status,
+        message: (body as { message?: string | string[] }).message,
+        context: 'cancel',
+      });
       throw new Error(msg);
     }
     const job = await res.json();

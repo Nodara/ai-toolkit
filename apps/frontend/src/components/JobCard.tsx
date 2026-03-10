@@ -19,7 +19,7 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import CancelIcon from '@mui/icons-material/Cancel';
 import BrokenImageIcon from '@mui/icons-material/BrokenImage';
 import { type Job } from '@/types';
-import { timeAgo } from '@/lib';
+import { timeAgo, formatJobErrorMessage } from '@/lib';
 
 interface JobCardProps {
   job: Job;
@@ -239,7 +239,7 @@ export function JobCard({ job, onRetry, onCancel }: JobCardProps) {
             color="error"
             sx={{ display: 'block', mt: 1 }}
           >
-            {job.errorMessage}
+            {formatJobErrorMessage(job.errorMessage)}
           </Typography>
         )}
 

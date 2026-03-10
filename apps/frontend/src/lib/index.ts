@@ -1,6 +1,8 @@
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
+export { getUserFriendlyMessage, formatJobErrorMessage } from './errorMessages';
+
 export function timeAgo(date: Date | string): string {
   const now = Date.now();
   const then =

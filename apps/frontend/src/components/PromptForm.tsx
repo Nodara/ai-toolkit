@@ -21,7 +21,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ImageIcon from '@mui/icons-material/Image';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
-import { API_URL } from '@/lib';
+import { API_URL, getUserFriendlyMessage } from '@/lib';
 import { useApiStatus } from '@/contexts/ApiStatusContext';
 
 type JobType = 'image' | 'text';
@@ -99,13 +99,13 @@ export function PromptForm() {
       setEnhancePrompt(false);
       setPriority(0);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to submit';
+      const rawMsg = err instanceof Error ? err.message : 'Failed to submit';
+      const msg = getUserFriendlyMessage({
+        message: rawMsg,
+        context: 'submit',
+      });
       setPromptError(msg);
-      if (
-        err instanceof Error &&
-        !msg.includes('at least') &&
-        !msg.includes('at most')
-      ) {
+      if (!rawMsg.includes('at least') && !rawMsg.includes('at most')) {
         setApiError(msg);
       }
     } finally {
