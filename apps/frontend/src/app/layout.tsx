@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Providers } from '@/components/providers';
-import { AppNav } from '@/components';
+import { AppNav, ApiStatusBanner } from '@/components';
 
 export const metadata: Metadata = {
   title: 'AI Toolkit',
@@ -17,6 +17,7 @@ export default function RootLayout({
       <body>
         <Providers>
           <AppNav />
+          <ApiStatusBanner />
           {children}
         </Providers>
       </body>

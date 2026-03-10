@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Container,
   Paper,
@@ -9,6 +9,7 @@ import {
   Button,
   Box,
   Typography,
+  Snackbar,
 } from '@mui/material';
 import ImageIcon from '@mui/icons-material/Image';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
@@ -36,11 +37,39 @@ const STATUS_OPTIONS: { value: JobStatusFilter; label: string }[] = [
 export default function Home() {
   const [typeFilter, setTypeFilter] = useState<JobTypeFilter>('all');
   const [statusFilter, setStatusFilter] = useState<JobStatusFilter>('all');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const { jobs, loading, newIds, retryJob, cancelJob } = useJobs({
     typeFilter,
     statusFilter,
   });
+
+  const handleRetry = useCallback(
+    async (jobId: string) => {
+      try {
+        await retryJob(jobId);
+      } catch (err) {
+        setSnackbarMessage(err instanceof Error ? err.message : 'Retry failed');
+        setSnackbarOpen(true);
+      }
+    },
+    [retryJob]
+  );
+
+  const handleCancel = useCallback(
+    async (jobId: string) => {
+      try {
+        await cancelJob(jobId);
+      } catch (err) {
+        setSnackbarMessage(
+          err instanceof Error ? err.message : 'Cancel failed'
+        );
+        setSnackbarOpen(true);
+      }
+    },
+    [cancelJob]
+  );
 
   const hasActiveFilters = typeFilter !== 'all' || statusFilter !== 'all';
   const clearFilters = () => {
@@ -144,11 +173,23 @@ export default function Home() {
                 transition: 'opacity 0.3s ease, transform 0.3s ease',
               }}
             >
-              <JobCard job={job} onRetry={retryJob} onCancel={cancelJob} />
+              <JobCard
+                job={job}
+                onRetry={handleRetry}
+                onCancel={handleCancel}
+              />
             </Box>
           ))
         )}
       </Box>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Container>
   );
 }

@@ -4,11 +4,14 @@
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v16-appRouter';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from '@/theme';
+import { ApiStatusProvider } from '@/contexts/ApiStatusContext';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AppRouterCacheProvider>
-      <ThemeProvider theme={theme}>{children}</ThemeProvider>
+      <ThemeProvider theme={theme}>
+        <ApiStatusProvider>{children}</ApiStatusProvider>
+      </ThemeProvider>
     </AppRouterCacheProvider>
   );
 }

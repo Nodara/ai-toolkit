@@ -22,6 +22,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ImageIcon from '@mui/icons-material/Image';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
 import { API_URL } from '@/lib';
+import { useApiStatus } from '@/contexts/ApiStatusContext';
 
 type JobType = 'image' | 'text';
 
@@ -36,6 +37,7 @@ const PROMPT_MIN = 3;
 const PROMPT_MAX = 500;
 
 export function PromptForm() {
+  const { setApiError } = useApiStatus();
   const [prompt, setPrompt] = useState('');
   const [type, setType] = useState<JobType>('image');
   const [enhancePrompt, setEnhancePrompt] = useState(false);
@@ -82,7 +84,13 @@ export function PromptForm() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message ?? `Request failed: ${res.status}`);
+        const msg =
+          (err as { message?: string }).message ??
+          `Request failed: ${res.status}`;
+        setApiError(
+          res.status >= 500 ? 'Server error. Please try again later.' : msg
+        );
+        throw new Error(msg);
       }
       setSnackbarOpen(true);
       setPrompt('');
@@ -91,7 +99,15 @@ export function PromptForm() {
       setEnhancePrompt(false);
       setPriority(0);
     } catch (err) {
-      setPromptError(err instanceof Error ? err.message : 'Failed to submit');
+      const msg = err instanceof Error ? err.message : 'Failed to submit';
+      setPromptError(msg);
+      if (
+        err instanceof Error &&
+        !msg.includes('at least') &&
+        !msg.includes('at most')
+      ) {
+        setApiError(msg);
+      }
     } finally {
       setSubmitting(false);
     }

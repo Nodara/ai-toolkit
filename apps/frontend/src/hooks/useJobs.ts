@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { type Job } from '@/types';
 import { API_URL } from '@/lib';
+import { useApiStatus } from '@/contexts/ApiStatusContext';
 
 export type JobTypeFilter = 'all' | 'image' | 'text';
 export type JobStatusFilter =
@@ -30,6 +31,7 @@ function jobMatchesFilters(
 
 export function useJobs(options: UseJobsOptions = {}) {
   const { typeFilter = 'all', statusFilter = 'all' } = options;
+  const { setApiError, setSseConnected } = useApiStatus();
   const [jobsMap, setJobsMap] = useState<Map<string, Job>>(new Map());
   const [loading, setLoading] = useState(true);
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
@@ -37,24 +39,33 @@ export function useJobs(options: UseJobsOptions = {}) {
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
+    setApiError(null);
     try {
       const params = new URLSearchParams();
       if (typeFilter !== 'all') params.set('type', typeFilter);
       if (statusFilter !== 'all') params.set('status', statusFilter);
       params.set('limit', '100');
       const res = await fetch(`${API_URL}/jobs?${params}`);
-      if (!res.ok) throw new Error('Failed to fetch jobs');
+      if (!res.ok) {
+        const is5xx = res.status >= 500;
+        throw new Error(
+          is5xx
+            ? 'Server error. Please try again later.'
+            : 'Failed to fetch jobs'
+        );
+      }
       const data = await res.json();
       const jobs: Job[] = data.data ?? [];
       const map = new Map<string, Job>();
       jobs.forEach((job: Job) => map.set(job.id, job));
       setJobsMap(map);
-    } catch {
+    } catch (err) {
       setJobsMap(new Map());
+      setApiError(err instanceof Error ? err.message : 'Failed to fetch jobs');
     } finally {
       setLoading(false);
     }
-  }, [typeFilter, statusFilter]);
+  }, [typeFilter, statusFilter, setApiError]);
 
   useEffect(() => {
     fetchJobs();
@@ -64,9 +75,13 @@ export function useJobs(options: UseJobsOptions = {}) {
     if (sseRef.current) {
       sseRef.current.close();
     }
+    setSseConnected(false);
     /* eslint-disable no-undef -- EventSource is browser-only */
     const es = new EventSource(`${API_URL}/events`);
     sseRef.current = es;
+
+    es.onopen = () => setSseConnected(true);
+    es.onerror = () => setSseConnected(false);
 
     es.onmessage = (e: MessageEvent) => {
       try {
@@ -111,8 +126,9 @@ export function useJobs(options: UseJobsOptions = {}) {
     return () => {
       es.close();
       sseRef.current = null;
+      setSseConnected(false);
     };
-  }, []);
+  }, [setSseConnected]);
 
   const jobs = Array.from(jobsMap.values()).sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -126,7 +142,11 @@ export function useJobs(options: UseJobsOptions = {}) {
     const res = await fetch(`${API_URL}/jobs/${jobId}/retry`, {
       method: 'POST',
     });
-    if (!res.ok) throw new Error('Retry failed');
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const msg = (body as { message?: string }).message ?? 'Retry failed';
+      throw new Error(msg);
+    }
     const job = await res.json();
     setJobsMap((prev) => {
       const next = new Map(prev);
@@ -139,7 +159,11 @@ export function useJobs(options: UseJobsOptions = {}) {
     const res = await fetch(`${API_URL}/jobs/${jobId}/cancel`, {
       method: 'DELETE',
     });
-    if (!res.ok) throw new Error('Cancel failed');
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const msg = (body as { message?: string }).message ?? 'Cancel failed';
+      throw new Error(msg);
+    }
     const job = await res.json();
     setJobsMap((prev) => {
       const next = new Map(prev);

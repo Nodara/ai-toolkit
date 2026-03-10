@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -58,11 +59,17 @@ export class JobsService {
       type: 'job:created',
       payload: this.toResponseDto(saved),
     });
-    await this.generationQueue.add(
-      'generate',
-      { jobId: saved.id },
-      { priority: saved.priority }
-    );
+    try {
+      await this.generationQueue.add(
+        'generate',
+        { jobId: saved.id },
+        { priority: saved.priority }
+      );
+    } catch {
+      throw new ServiceUnavailableException(
+        'Job queue is temporarily unavailable. Please try again later.'
+      );
+    }
     return this.toResponseDto(saved);
   }
 
@@ -150,11 +157,17 @@ export class JobsService {
       errorMessage: null,
     });
 
-    await this.generationQueue.add(
-      'generate',
-      { jobId: id },
-      { priority: entity.priority }
-    );
+    try {
+      await this.generationQueue.add(
+        'generate',
+        { jobId: id },
+        { priority: entity.priority }
+      );
+    } catch {
+      throw new ServiceUnavailableException(
+        'Job queue is temporarily unavailable. Please try again later.'
+      );
+    }
 
     const updated = await this.jobRepository.findOneOrFail({ where: { id } });
     this.sseService.broadcast({

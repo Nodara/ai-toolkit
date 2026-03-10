@@ -2,7 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { AppBar, Toolbar, Typography, Tabs, Tab } from '@mui/material';
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Tabs,
+  Tab,
+  Chip,
+  Box,
+} from '@mui/material';
+import { useApiStatus } from '@/contexts/ApiStatusContext';
 
 const navItems = [
   { href: '/', label: 'Gallery' },
@@ -11,6 +20,7 @@ const navItems = [
 
 export function AppNav() {
   const pathname = usePathname();
+  const { sseConnected } = useApiStatus();
 
   const tabValue = navItems.findIndex((item) => {
     if (item.href === '/') return pathname === '/';
@@ -40,6 +50,18 @@ export function AppNav() {
             />
           ))}
         </Tabs>
+        <Box sx={{ flex: 1 }} />
+        {!sseConnected && (
+          <Chip
+            size="small"
+            label="● live updates off"
+            sx={{
+              color: 'warning.main',
+              bgcolor: 'warning.light',
+              '& .MuiChip-label': { fontSize: '0.75rem' },
+            }}
+          />
+        )}
       </Toolbar>
     </AppBar>
   );

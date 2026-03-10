@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import {
   Table,
@@ -21,6 +21,7 @@ import {
   Typography,
   IconButton,
   Chip,
+  Snackbar,
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
@@ -260,17 +261,50 @@ export default function HistoryPage() {
     return filteredAndSorted.slice(start, start + ROWS_PER_PAGE);
   }, [filteredAndSorted, page]);
 
-  const handleRetry = async (id: string) => {
-    const res = await fetch(`${API_URL}/jobs/${id}/retry`, { method: 'POST' });
-    if (res.ok) refetch();
-  };
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
-  const handleCancel = async (id: string) => {
-    const res = await fetch(`${API_URL}/jobs/${id}/cancel`, {
-      method: 'DELETE',
-    });
-    if (res.ok) refetch();
-  };
+  const handleRetry = useCallback(
+    async (id: string) => {
+      try {
+        const res = await fetch(`${API_URL}/jobs/${id}/retry`, {
+          method: 'POST',
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          const msg = (body as { message?: string }).message ?? 'Retry failed';
+          throw new Error(msg);
+        }
+        refetch();
+      } catch (err) {
+        setSnackbarMessage(err instanceof Error ? err.message : 'Retry failed');
+        setSnackbarOpen(true);
+      }
+    },
+    [refetch]
+  );
+
+  const handleCancel = useCallback(
+    async (id: string) => {
+      try {
+        const res = await fetch(`${API_URL}/jobs/${id}/cancel`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          const msg = (body as { message?: string }).message ?? 'Cancel failed';
+          throw new Error(msg);
+        }
+        refetch();
+      } catch (err) {
+        setSnackbarMessage(
+          err instanceof Error ? err.message : 'Cancel failed'
+        );
+        setSnackbarOpen(true);
+      }
+    },
+    [refetch]
+  );
 
   return (
     <Box sx={{ p: 3 }}>
@@ -376,6 +410,14 @@ export default function HistoryPage() {
           rowsPerPageOptions={[ROWS_PER_PAGE]}
         />
       </TableContainer>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Box>
   );
 }

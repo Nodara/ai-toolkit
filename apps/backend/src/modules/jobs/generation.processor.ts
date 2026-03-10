@@ -110,7 +110,7 @@ export class GenerationProcessor extends WorkerHost {
         message.includes('timeout') ||
         message.includes('timed out')
       ) {
-        return 'Job timed out after 30 seconds';
+        return 'Generation timed out after 30s';
       }
       return error.message;
     }

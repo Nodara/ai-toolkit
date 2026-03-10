@@ -17,6 +17,7 @@ import {
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ReplayIcon from '@mui/icons-material/Replay';
 import CancelIcon from '@mui/icons-material/Cancel';
+import BrokenImageIcon from '@mui/icons-material/BrokenImage';
 import { type Job } from '@/types';
 import { timeAgo } from '@/lib';
 
@@ -90,6 +91,7 @@ function PromptDisplay({
 
 export function JobCard({ job, onRetry, onCancel }: JobCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const [promptExpanded, setPromptExpanded] = useState(false);
 
   const displayPrompt = job.enhancedPrompt ?? job.prompt;
@@ -174,25 +176,44 @@ export function JobCard({ job, onRetry, onCancel }: JobCardProps) {
               bgcolor: 'action.hover',
             }}
           >
-            {!imageLoaded && (
-              <Skeleton
-                variant="rectangular"
+            {imageError ? (
+              <Box
                 sx={{
-                  position: 'absolute',
-                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   width: '100%',
                   height: '100%',
+                  minHeight: 120,
+                  bgcolor: 'grey.300',
                 }}
-              />
+              >
+                <BrokenImageIcon sx={{ fontSize: 48, color: 'grey.500' }} />
+              </Box>
+            ) : (
+              <>
+                {!imageLoaded && (
+                  <Skeleton
+                    variant="rectangular"
+                    sx={{
+                      position: 'absolute',
+                      inset: 0,
+                      width: '100%',
+                      height: '100%',
+                    }}
+                  />
+                )}
+                <Image
+                  src={job.resultUrl}
+                  alt={job.prompt}
+                  fill
+                  sizes="(max-width: 600px) 100vw, 400px"
+                  style={{ objectFit: 'cover' }}
+                  onLoad={() => setImageLoaded(true)}
+                  onError={() => setImageError(true)}
+                />
+              </>
             )}
-            <Image
-              src={job.resultUrl}
-              alt={job.prompt}
-              fill
-              sizes="(max-width: 600px) 100vw, 400px"
-              style={{ objectFit: 'cover' }}
-              onLoad={() => setImageLoaded(true)}
-            />
           </Box>
         )}
 
