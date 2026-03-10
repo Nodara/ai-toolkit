@@ -1,7 +1,12 @@
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-
+export { API_URL } from './env';
 export { getUserFriendlyMessage, formatJobErrorMessage } from './errorMessages';
+export {
+  fetchJobs,
+  createJob,
+  retryJob,
+  cancelJob,
+  deleteJob,
+} from './apiClient';
 
 export function timeAgo(date: Date | string): string {
   const now = Date.now();

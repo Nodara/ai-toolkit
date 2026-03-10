@@ -1,19 +1,20 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
+import { AppConfigService } from '@/config';
 
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        url: configService.get<string>('DATABASE_URL'),
+      useFactory: (appConfig: AppConfigService) => ({
+        type: 'postgres' as const,
+        url: appConfig.databaseUrl,
         autoLoadEntities: true,
         migrations: [__dirname + '/migrations/*{.ts,.js}'],
         migrationsRun: false,
       }),
-      inject: [ConfigService],
+      inject: [AppConfigService],
     }),
   ],
 })

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { AppModule } from '@/app.module';
 import { GlobalExceptionFilter } from '@/common/filters';
+import { AppConfigService } from '@/config';
 
 const logger = new Logger('Bootstrap');
 const MAX_RETRIES = 5;
@@ -29,9 +30,10 @@ function isConnectionError(err: unknown): boolean {
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
+  const appConfig = app.get(AppConfigService);
   app.useGlobalFilters(new GlobalExceptionFilter());
   app.enableCors({
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:3000',
+    origin: appConfig.corsOrigin,
     credentials: true,
   });
   app.useGlobalPipes(
@@ -44,7 +46,7 @@ async function bootstrap(): Promise<void> {
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   const dataSource = app.get(DataSource);
   await dataSource.runMigrations();
-  await app.listen(process.env.PORT ?? 3001);
+  await app.listen(appConfig.port);
 }
 
 async function bootstrapWithRetry(): Promise<void> {

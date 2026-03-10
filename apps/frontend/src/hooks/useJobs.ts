@@ -1,9 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { type Job } from '@/types';
-import { API_URL, getUserFriendlyMessage } from '@/lib';
+import type { Job } from '@/common/types';
+import {
+  API_URL,
+  getUserFriendlyMessage,
+  fetchJobs as apiFetchJobs,
+  retryJob as apiRetryJob,
+  cancelJob as apiCancelJob,
+  deleteJob as apiDeleteJob,
+} from '@/lib';
 import { useApiStatus } from '@/contexts/ApiStatusContext';
+import type { SseEvent } from '@/common/types';
 
 export type JobTypeFilter = 'all' | 'image' | 'text';
 export type JobStatusFilter =
@@ -29,7 +37,17 @@ function jobMatchesFilters(
   return true;
 }
 
-export function useJobs(options: UseJobsOptions = {}) {
+export interface UseJobsReturn {
+  jobs: Job[];
+  loading: boolean;
+  newIds: Set<string>;
+  retryJob: (jobId: string) => Promise<void>;
+  cancelJob: (jobId: string) => Promise<void>;
+  deleteJob: (jobId: string) => Promise<void>;
+  refetch: () => Promise<void>;
+}
+
+export function useJobs(options: UseJobsOptions = {}): UseJobsReturn {
   const { typeFilter = 'all', statusFilter = 'all' } = options;
   const { setApiError, setSseConnected } = useApiStatus();
   const [jobsMap, setJobsMap] = useState<Map<string, Job>>(new Map());
@@ -37,34 +55,23 @@ export function useJobs(options: UseJobsOptions = {}) {
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
   const sseRef = useRef<EventSource | null>(null);
 
-  const fetchJobs = useCallback(async () => {
+  const fetchJobs = useCallback(async (): Promise<void> => {
     setLoading(true);
     setApiError(null);
     try {
-      const params = new URLSearchParams();
-      if (typeFilter !== 'all') params.set('type', typeFilter);
-      if (statusFilter !== 'all') params.set('status', statusFilter);
-      params.set('limit', '100');
-      const res = await fetch(`${API_URL}/jobs?${params}`);
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        const msg = getUserFriendlyMessage({
-          status: res.status,
-          message: (body as { message?: string | string[] }).message,
-          context: 'fetch',
-        });
-        throw new Error(msg);
-      }
-      const data = await res.json();
-      const jobs: Job[] = data.data ?? [];
+      const result = await apiFetchJobs({
+        type: typeFilter,
+        status: statusFilter,
+        limit: 100,
+      });
       const map = new Map<string, Job>();
-      jobs.forEach((job: Job) => map.set(job.id, job));
+      result.data.forEach((job: Job) => map.set(job.id, job));
       setJobsMap(map);
     } catch (err) {
       setJobsMap(new Map());
       const msg =
         err instanceof Error
-          ? getUserFriendlyMessage({ message: err.message, context: 'fetch' })
+          ? getUserFriendlyMessage({ message: err.message })
           : 'Something went wrong. Please try again.';
       setApiError(msg);
     } finally {
@@ -81,16 +88,15 @@ export function useJobs(options: UseJobsOptions = {}) {
       sseRef.current.close();
     }
     setSseConnected(false);
-    /* eslint-disable no-undef -- EventSource is browser-only */
     const es = new EventSource(`${API_URL}/events`);
     sseRef.current = es;
 
-    es.onopen = () => setSseConnected(true);
-    es.onerror = () => setSseConnected(false);
+    es.onopen = (): void => setSseConnected(true);
+    es.onerror = (): void => setSseConnected(false);
 
-    es.onmessage = (e: MessageEvent) => {
+    es.onmessage = (e: globalThis.MessageEvent<string>): void => {
       try {
-        const event = JSON.parse(e.data);
+        const event = JSON.parse(e.data) as SseEvent;
         const payload = event.payload;
         if (!payload || typeof payload !== 'object') return;
 
@@ -123,7 +129,7 @@ export function useJobs(options: UseJobsOptions = {}) {
             });
           }
         } else if (event.type === 'job:deleted') {
-          const { id } = payload as { id?: string };
+          const { id } = payload as { id: string };
           if (id) {
             setJobsMap((prev) => {
               const next = new Map(prev);
@@ -152,20 +158,8 @@ export function useJobs(options: UseJobsOptions = {}) {
     jobMatchesFilters(job, typeFilter, statusFilter)
   );
 
-  const retryJob = useCallback(async (jobId: string) => {
-    const res = await fetch(`${API_URL}/jobs/${jobId}/retry`, {
-      method: 'POST',
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      const msg = getUserFriendlyMessage({
-        status: res.status,
-        message: (body as { message?: string | string[] }).message,
-        context: 'retry',
-      });
-      throw new Error(msg);
-    }
-    const job = await res.json();
+  const retryJob = useCallback(async (jobId: string): Promise<void> => {
+    const job = await apiRetryJob(jobId);
     setJobsMap((prev) => {
       const next = new Map(prev);
       next.set(job.id, job);
@@ -173,20 +167,8 @@ export function useJobs(options: UseJobsOptions = {}) {
     });
   }, []);
 
-  const cancelJob = useCallback(async (jobId: string) => {
-    const res = await fetch(`${API_URL}/jobs/${jobId}/cancel`, {
-      method: 'DELETE',
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      const msg = getUserFriendlyMessage({
-        status: res.status,
-        message: (body as { message?: string | string[] }).message,
-        context: 'cancel',
-      });
-      throw new Error(msg);
-    }
-    const job = await res.json();
+  const cancelJob = useCallback(async (jobId: string): Promise<void> => {
+    const job = await apiCancelJob(jobId);
     setJobsMap((prev) => {
       const next = new Map(prev);
       next.set(job.id, job);
@@ -194,19 +176,8 @@ export function useJobs(options: UseJobsOptions = {}) {
     });
   }, []);
 
-  const deleteJob = useCallback(async (jobId: string) => {
-    const res = await fetch(`${API_URL}/jobs/${jobId}`, {
-      method: 'DELETE',
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      const msg = getUserFriendlyMessage({
-        status: res.status,
-        message: (body as { message?: string | string[] }).message,
-        context: 'fetch',
-      });
-      throw new Error(msg);
-    }
+  const deleteJob = useCallback(async (jobId: string): Promise<void> => {
+    await apiDeleteJob(jobId);
     setJobsMap((prev) => {
       const next = new Map(prev);
       next.delete(jobId);

@@ -1,25 +1,26 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
+import { AppConfigService } from '@/config';
 import { QueueService } from '@/modules/queue/queue.service';
 
 @Module({
   imports: [
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => {
-        const url = configService.get<string>('REDIS_URL');
+      useFactory: (appConfig: AppConfigService) => {
+        const url = appConfig.redisUrl;
         if (url) {
           return { connection: { url } };
         }
         return {
           connection: {
-            host: configService.get<string>('REDIS_HOST', 'localhost'),
-            port: configService.get<number>('REDIS_PORT', 6379),
+            host: appConfig.redisHost,
+            port: appConfig.redisPort,
           },
         };
       },
-      inject: [ConfigService],
+      inject: [AppConfigService],
     }),
     BullModule.registerQueue({
       name: 'generation',

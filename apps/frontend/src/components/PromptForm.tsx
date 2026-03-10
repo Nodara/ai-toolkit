@@ -21,17 +21,10 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ImageIcon from '@mui/icons-material/Image';
 import TextFieldsIcon from '@mui/icons-material/TextFields';
-import { API_URL, getUserFriendlyMessage } from '@/lib';
+import { createJob, getUserFriendlyMessage } from '@/lib';
 import { useApiStatus } from '@/contexts/ApiStatusContext';
 
 type JobType = 'image' | 'text';
-
-interface CreateJobPayload {
-  prompt: string;
-  type: JobType;
-  enhancePrompt?: boolean;
-  priority?: number;
-}
 
 const PROMPT_MIN = 3;
 const PROMPT_MAX = 500;
@@ -71,27 +64,12 @@ export function PromptForm() {
 
     setSubmitting(true);
     try {
-      const payload: CreateJobPayload = {
+      await createJob({
         prompt: prompt.trim(),
         type,
         enhancePrompt,
         priority,
-      };
-      const res = await fetch(`${API_URL}/jobs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        const msg =
-          (err as { message?: string }).message ??
-          `Request failed: ${res.status}`;
-        setApiError(
-          res.status >= 500 ? 'Server error. Please try again later.' : msg
-        );
-        throw new Error(msg);
-      }
       setSnackbarOpen(true);
       setPrompt('');
       setPromptError('');
@@ -100,10 +78,7 @@ export function PromptForm() {
       setPriority(0);
     } catch (err) {
       const rawMsg = err instanceof Error ? err.message : 'Failed to submit';
-      const msg = getUserFriendlyMessage({
-        message: rawMsg,
-        context: 'submit',
-      });
+      const msg = getUserFriendlyMessage({ message: rawMsg });
       setPromptError(msg);
       if (!rawMsg.includes('at least') && !rawMsg.includes('at most')) {
         setApiError(msg);

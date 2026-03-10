@@ -1,18 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { Response } from 'express';
-import { JobResponseDto } from '@/modules/jobs/dto/job-response.dto';
+import type { Response } from 'express';
+import type { SseEvent } from '@/common/types';
 
-export interface SseEvent {
-  type:
-    | 'job:created'
-    | 'job:updated'
-    | 'job:completed'
-    | 'job:failed'
-    | 'job:deleted'
-    | 'heartbeat'
-    | 'connected';
-  payload?: JobResponseDto | { clientId: string } | { id: string };
-}
+export type { SseEvent };
 
 @Injectable()
 export class SseService {

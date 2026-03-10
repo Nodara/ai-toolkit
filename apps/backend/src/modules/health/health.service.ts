@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import Redis from 'ioredis';
+import { AppConfigService } from '@/config';
 
 export interface HealthResult {
   status: 'ok' | 'degraded';
@@ -44,9 +44,9 @@ export class HealthService {
   }
 
   private async checkRedis(): Promise<{ status: 'up' | 'down' }> {
-    const url = this.configService.get<string>('REDIS_URL');
-    const host = this.configService.get<string>('REDIS_HOST', 'localhost');
-    const port = this.configService.get<number>('REDIS_PORT', 6379);
+    const url = this.appConfig.redisUrl;
+    const host = this.appConfig.redisHost;
+    const port = this.appConfig.redisPort;
 
     let redis: Redis | null = null;
     try {
@@ -62,6 +62,6 @@ export class HealthService {
 
   constructor(
     private readonly dataSource: DataSource,
-    private readonly configService: ConfigService
+    private readonly appConfig: AppConfigService
   ) {}
 }

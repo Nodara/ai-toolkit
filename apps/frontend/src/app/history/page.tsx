@@ -31,7 +31,13 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useJobsHistory } from '@/hooks/useJobsHistory';
 import { useDebounce } from '@/hooks/useDebounce';
-import { API_URL, getUserFriendlyMessage, formatJobErrorMessage } from '@/lib';
+import {
+  retryJob as apiRetryJob,
+  cancelJob as apiCancelJob,
+  deleteJob as apiDeleteJob,
+  getUserFriendlyMessage,
+  formatJobErrorMessage,
+} from '@/lib';
 import type { Job } from '@/types';
 
 const PROMPT_MAX = 40;
@@ -292,23 +298,12 @@ export default function HistoryPage() {
   const handleRetry = useCallback(
     async (id: string) => {
       try {
-        const res = await fetch(`${API_URL}/jobs/${id}/retry`, {
-          method: 'POST',
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          const msg = getUserFriendlyMessage({
-            status: res.status,
-            message: (body as { message?: string | string[] }).message,
-            context: 'retry',
-          });
-          throw new Error(msg);
-        }
+        await apiRetryJob(id);
         refetch();
       } catch (err) {
         const msg =
           err instanceof Error
-            ? getUserFriendlyMessage({ message: err.message, context: 'retry' })
+            ? getUserFriendlyMessage({ message: err.message })
             : 'Something went wrong. Please try again.';
         setSnackbarMessage(msg);
         setSnackbarOpen(true);
@@ -320,26 +315,12 @@ export default function HistoryPage() {
   const handleCancel = useCallback(
     async (id: string) => {
       try {
-        const res = await fetch(`${API_URL}/jobs/${id}/cancel`, {
-          method: 'DELETE',
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          const msg = getUserFriendlyMessage({
-            status: res.status,
-            message: (body as { message?: string | string[] }).message,
-            context: 'cancel',
-          });
-          throw new Error(msg);
-        }
+        await apiCancelJob(id);
         refetch();
       } catch (err) {
         const msg =
           err instanceof Error
-            ? getUserFriendlyMessage({
-                message: err.message,
-                context: 'cancel',
-              })
+            ? getUserFriendlyMessage({ message: err.message })
             : 'Something went wrong. Please try again.';
         setSnackbarMessage(msg);
         setSnackbarOpen(true);
@@ -351,23 +332,12 @@ export default function HistoryPage() {
   const handleDelete = useCallback(
     async (id: string) => {
       try {
-        const res = await fetch(`${API_URL}/jobs/${id}`, {
-          method: 'DELETE',
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          const msg = getUserFriendlyMessage({
-            status: res.status,
-            message: (body as { message?: string | string[] }).message,
-            context: 'fetch',
-          });
-          throw new Error(msg);
-        }
+        await apiDeleteJob(id);
         refetch();
       } catch (err) {
         const msg =
           err instanceof Error
-            ? getUserFriendlyMessage({ message: err.message, context: 'fetch' })
+            ? getUserFriendlyMessage({ message: err.message })
             : 'Something went wrong. Please try again.';
         setSnackbarMessage(msg);
         setSnackbarOpen(true);

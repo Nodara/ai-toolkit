@@ -7,10 +7,7 @@ import { JobEntity, JobStatus } from '@/modules/jobs/entities/job.entity';
 import { GenerationService } from '@/modules/generation/generation.service';
 import { SseService } from '@/modules/sse/sse.service';
 import { JobsService } from '@/modules/jobs/jobs.service';
-
-export interface GenerationJobData {
-  jobId: string;
-}
+import type { GenerationJobData } from '@/common/types';
 
 @Processor('generation')
 @Injectable()

@@ -15,19 +15,13 @@ import { JobResponseDto } from '@/modules/jobs/dto/job-response.dto';
 import { JobFilterDto } from '@/modules/jobs/dto/job-filter.dto';
 import { PromptEnhancementService } from '@/modules/generation/prompt-enhancement.service';
 import { SseService } from '@/modules/sse/sse.service';
-
-export interface PaginatedJobs {
-  data: JobResponseDto[];
-  total: number;
-  page: number;
-  limit: number;
-}
+import type { GenerationJobData, PaginatedResponse } from '@/common/types';
 
 @Injectable()
 export class JobsService {
   constructor(
     @InjectQueue('generation')
-    private readonly generationQueue: Queue,
+    private readonly generationQueue: Queue<GenerationJobData>,
     @InjectRepository(JobEntity)
     private readonly jobRepository: Repository<JobEntity>,
     private readonly promptEnhancementService: PromptEnhancementService,
@@ -60,11 +54,10 @@ export class JobsService {
       payload: this.toResponseDto(saved),
     });
     try {
-      await this.generationQueue.add(
-        'generate',
-        { jobId: saved.id },
-        { priority: saved.priority }
-      );
+      const jobData: GenerationJobData = { jobId: saved.id };
+      await this.generationQueue.add('generate', jobData, {
+        priority: saved.priority,
+      });
     } catch {
       throw new ServiceUnavailableException(
         'Job queue is temporarily unavailable. Please try again later.'
@@ -73,7 +66,9 @@ export class JobsService {
     return this.toResponseDto(saved);
   }
 
-  async findAll(filter: JobFilterDto): Promise<PaginatedJobs> {
+  async findAll(
+    filter: JobFilterDto
+  ): Promise<PaginatedResponse<JobResponseDto>> {
     const page = filter.page ?? 1;
     const limit = filter.limit ?? 20;
     const skip = (page - 1) * limit;
@@ -158,11 +153,10 @@ export class JobsService {
     });
 
     try {
-      await this.generationQueue.add(
-        'generate',
-        { jobId: id },
-        { priority: entity.priority }
-      );
+      const jobData: GenerationJobData = { jobId: id };
+      await this.generationQueue.add('generate', jobData, {
+        priority: entity.priority,
+      });
     } catch {
       throw new ServiceUnavailableException(
         'Job queue is temporarily unavailable. Please try again later.'
