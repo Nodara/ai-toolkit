@@ -1,13 +1,12 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
-import { ConfigModule } from '@nestjs/config';
-import { AppConfigService } from '@/config';
+import { AppConfigModule, AppConfigService } from '@/config';
 import { QueueService } from '@/modules/queue/queue.service';
 
 @Module({
   imports: [
     BullModule.forRootAsync({
-      imports: [ConfigModule],
+      imports: [AppConfigModule],
       useFactory: (appConfig: AppConfigService) => {
         const url = appConfig.redisUrl;
         if (url) {
